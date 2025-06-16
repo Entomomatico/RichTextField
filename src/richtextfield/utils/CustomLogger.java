@@ -12,8 +12,7 @@ import java.util.logging.Logger;
 public class CustomLogger {
 
     /**
-     * This method allows to print a string and/or throwable avoiding logger's
-     * handlers.
+     * This method allows to print a string and/or throwable avoiding logger's handlers.
      *
      * @param source
      * @param level
@@ -28,26 +27,25 @@ public class CustomLogger {
                 getStackTrace(t)
         );
         Logger logger = Logger.getLogger(source != null ? source.getName() : CustomLogger.class.getName());
-        switch (level) {
-            case Level l when isBetween(l, Level.SEVERE, Level.OFF) ->
-                logger.severe(msg);
-            case Level l when isBetween(l, Level.WARNING, Level.SEVERE) ->
-                logger.warning(msg);
-            case Level l when isBetween(l, Level.INFO, Level.WARNING) ->
-                logger.info(msg);
-            case Level l when isBetween(l, Level.CONFIG, Level.INFO) ->
-                logger.config(msg);
-            case Level l when isBetween(l, Level.FINE, Level.CONFIG) ->
-                logger.fine(msg);
-            case Level l when isBetween(l, Level.FINER, Level.FINE) ->
-                logger.finer(msg);
-            case null, default ->
-                logger.finest(msg);
+        if (isBetween(level, Level.SEVERE, Level.OFF)) {
+            logger.severe(msg);
+        } else if (isBetween(level, Level.WARNING, Level.SEVERE)) {
+            logger.warning(msg);
+        } else if (isBetween(level, Level.INFO, Level.WARNING)) {
+            logger.info(msg);
+        } else if (isBetween(level, Level.CONFIG, Level.INFO)) {
+            logger.config(msg);
+        } else if (isBetween(level, Level.FINE, Level.CONFIG)) {
+            logger.fine(msg);
+        } else if (isBetween(level, Level.FINER, Level.FINE)) {
+            logger.finer(msg);
+        } else {
+            logger.finest(msg);
         }
     }
 
     private static boolean isBetween(Level toEvaluate, Level bottom, Level top) {
-        return toEvaluate.intValue() >= bottom.intValue() && toEvaluate.intValue() < top.intValue();
+        return toEvaluate != null && toEvaluate.intValue() >= bottom.intValue() && toEvaluate.intValue() < top.intValue();
     }
 
     /**

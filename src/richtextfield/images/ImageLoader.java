@@ -1,5 +1,8 @@
 package richtextfield.images;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import javax.swing.ImageIcon;
 
 public class ImageLoader {
@@ -26,5 +29,14 @@ public class ImageLoader {
     
     public static ImageIcon get(String imagePath){
         return new ImageIcon(ImageLoader.class.getResource(imagePath));
+    }
+    
+    public static ImageIcon generateRectangleColorIcon( int width, int height, Color color){
+        BufferedImage bi = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = (Graphics2D)bi.getGraphics();
+        g.setColor(color);
+        g.fillRect(0, 0, width, height);
+        g.dispose();
+        return new ImageIcon(bi);
     }
 }

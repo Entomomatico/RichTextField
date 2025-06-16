@@ -1,28 +1,34 @@
 package richtextfield;
 
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.Base64;
+import java.util.List;
 import java.util.logging.Level;
+import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JFileChooser;
 import javax.swing.JTextPane;
 import javax.swing.text.AttributeSet;
-import javax.swing.text.BadLocationException;
 import javax.swing.text.Element;
 import javax.swing.text.MutableAttributeSet;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
+import javax.swing.text.html.HTML;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
-import javax.swing.text.rtf.RTFEditorKit;
 import richtextfield.utils.CustomLogger;
 
-public class RTFActions {
+public class HTMLActions {
 
     private static final float INDENT_STEP = 20f;
 
@@ -54,6 +60,23 @@ public class RTFActions {
             StyleConstants.setItalic(attrs, !StyleConstants.isItalic(attrs));
         } else if (styleAttribute == StyleConstants.CharacterConstants.Underline) {
             StyleConstants.setUnderline(attrs, !StyleConstants.isUnderline(attrs));
+        }
+
+        textPane.getStyledDocument().setCharacterAttributes(start, end - start, attrs, false);
+    }
+
+    public static void setTextBackground(JTextPane textPane, Color background) {
+        int start = textPane.getSelectionStart();
+        int end = textPane.getSelectionEnd();
+
+        if (start == end) {
+            return;
+        }
+        MutableAttributeSet attrs = new SimpleAttributeSet(textPane.getCharacterAttributes());
+        if (Color.BLACK.equals(background)) {
+            StyleConstants.setBackground(attrs, new Color(background.getRed(), background.getGreen(), background.getBlue(), 0));
+        } else {
+            StyleConstants.setBackground(attrs, background);
         }
 
         textPane.getStyledDocument().setCharacterAttributes(start, end - start, attrs, false);
@@ -109,69 +132,66 @@ public class RTFActions {
 
     public static void addImage(JTextPane textPane) {
         File file = getFile(textPane, JFileChooser.OPEN_DIALOG);
-//        if (file != null && file.exists()) {
-//            ImageIcon icon = new ImageIcon(file.getAbsolutePath());
-//            textPane.setCaretPosition(textPane.getCaretPosition());
-//            textPane.insertIcon(icon);
-//        }
-        
         if (file != null && file.exists()) {
             ImageIcon icon = new ImageIcon(file.getAbsolutePath());
-            if (icon.getIconWidth() <= 0) {
-                CustomLogger.print(RTFActions.class, Level.SEVERE, "Imagen no válida o no cargada.n", null);
-                return;
-            }
-
-            SimpleAttributeSet attrs = new SimpleAttributeSet();
-            StyleConstants.setIcon(attrs, icon);
-
+            HTMLEditorKit kit = (HTMLEditorKit) textPane.getEditorKit();
+            HTMLDocument doc = (HTMLDocument) textPane.getDocument();
             try {
-                StyledDocument doc = textPane.getStyledDocument();
-                int pos = textPane.getCaretPosition();
-                doc.insertString(pos, " ", attrs); // espacio necesario
-            } catch (BadLocationException e) {
-                CustomLogger.print(RTFActions.class, Level.SEVERE, "Error al añadir la imagen.", e);
+                String base64 = encodeToBase64(icon);
+                String imgTag = "<p><img src=\"data:image/png;base64," + base64 + "\"></p>";
+                kit.insertHTML(doc, textPane.getCaretPosition(), imgTag, 0, 0, HTML.Tag.P);
+                textPane.revalidate();
+                textPane.repaint();
+            } catch (Exception e) {
+                CustomLogger.print(HTMLActions.class, Level.SEVERE, "Error al intentar añadir una imagen.", e);
             }
+
         }
     }
 
-    public static void saveAsRTF(JTextPane textPane, File file) {
-        RTFEditorKit rtfKit = new RTFEditorKit();
-        try (FileOutputStream fos = new FileOutputStream(file)) {
-            rtfKit.write(fos, textPane.getDocument(), 0, textPane.getDocument().getLength());
-        }catch(Exception e){
-            CustomLogger.print(RTFActions.class, Level.SEVERE, "Error al guardar fichero RTF.", e);
+    private static String encodeToBase64(ImageIcon icon) throws IOException {
+        BufferedImage image = new BufferedImage(
+                icon.getIconWidth(), icon.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
+        Graphics g = image.createGraphics();
+        icon.paintIcon(null, g, 0, 0);
+        g.dispose();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", baos);
+        return Base64.getEncoder().encodeToString(baos.toByteArray());
+    }
+
+    public static void setAsList(JTextPane textPane, boolean isNumber) {
+        try {
+            HTMLListText.doList(textPane,
+                    isNumber ? HTMLListText.MODE.INSERT_NUMBER : HTMLListText.MODE.INSERT_BULLET);
+        } catch (Exception ex) {
+            CustomLogger.print(HTMLActions.class, Level.SEVERE, "Error al intentar añadir Bullet/Number List.", ex);
         }
     }
 
-    public static void loadFromRTF(JTextPane textPane, File file){
-        RTFEditorKit rtfKit = new RTFEditorKit();
-        StyledDocument doc = (StyledDocument) rtfKit.createDefaultDocument();
-        try (FileInputStream fis = new FileInputStream(file)) {
-            rtfKit.read(fis, doc, 0);
-            textPane.setDocument(doc);
-        }catch(Exception e){
-            CustomLogger.print(RTFActions.class, Level.SEVERE, "Error al cargar fichero RTF.", e);
-        }
-    }
-
-    public static void saveAsHTML(JTextPane textPane, File file){
-        HTMLEditorKit htmlKit = new HTMLEditorKit();
-        try (FileWriter writer = new FileWriter(file)) {
-            htmlKit.write(writer, textPane.getDocument(), 0, textPane.getDocument().getLength());
-        }catch(Exception e){
-            CustomLogger.print(RTFActions.class, Level.SEVERE, "Error al guardar fichero HTML.", e);
+    public static void saveAsHTML(JTextPane textPane, File file) {
+        if (file != null) {
+            try {
+                HTMLEditorKit kit = (HTMLEditorKit) textPane.getEditorKit();
+                StringWriter writer = new StringWriter();
+                kit.write(writer, textPane.getDocument(), 0, textPane.getDocument().getLength());
+                Files.writeString(file.toPath(), writer.toString(), StandardOpenOption.CREATE);
+            } catch (Exception e) {
+                CustomLogger.print(HTMLActions.class, Level.SEVERE, "Error al guardar fichero HTML.", e);
+            }
         }
     }
 
     public static void loadFromHTML(JTextPane textPane, File file) {
-        HTMLEditorKit htmlKit = new HTMLEditorKit();
-        HTMLDocument htmlDoc = (HTMLDocument) htmlKit.createDefaultDocument();
-        try (FileReader reader = new FileReader(file)) {
-            htmlKit.read(reader, htmlDoc, 0);
-            textPane.setDocument(htmlDoc);
-        }catch(Exception e){
-            CustomLogger.print(RTFActions.class, Level.SEVERE, "Error al guardar fichero HTML.", e);
+        if (file != null && file.exists() && file.isFile()) {
+            try {
+                List<String> stringLines = Files.readAllLines(file.toPath());
+                HTMLEditorKit kit = (HTMLEditorKit) textPane.getEditorKit();
+                textPane.setText("");
+                kit.read(new StringReader(String.join("", stringLines)), textPane.getDocument(), 0);
+            } catch (Exception e) {
+                CustomLogger.print(HTMLActions.class, Level.SEVERE, "Error al guardar fichero HTML.", e);
+            }
         }
     }
 }

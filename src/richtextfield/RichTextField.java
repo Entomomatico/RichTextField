@@ -1,33 +1,34 @@
 package richtextfield;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
+import java.awt.GraphicsEnvironment;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
-import java.math.BigInteger;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JColorChooser;
+import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JSpinner;
 import javax.swing.JTextPane;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
-import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledEditorKit;
-import javax.swing.text.ViewFactory;
-import javax.swing.text.rtf.RTFEditorKit;
+import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.undo.UndoManager;
 import richtextfield.images.ImageLoader;
 
@@ -60,7 +61,10 @@ public class RichTextField extends JPanel {
     public static final String ID_ACTION_CUT = "cutAction";
     public static final String ID_ACTION_COPY = "copyAction";
     public static final String ID_ACTION_PASTE = "pasteAction";
+    public static final String ID_ACTION_FONT_FAMILY = "fontFamilyAction";
     public static final String ID_ACTION_FONT_SIZE = "fontSizeAction";
+    public static final String ID_ACTION_FONT_COLOR = "fontColorAction";
+    public static final String ID_ACTION_FONT_BACKGROUND = "fontBackgroundAction";
     public static final String ID_ACTION_BOLD = "boldAction";
     public static final String ID_ACTION_UNDERLINE = "underlineAction";
     public static final String ID_ACTION_ITALIC = "italicAction";
@@ -111,12 +115,12 @@ public class RichTextField extends JPanel {
         toolbar.setRollover(true);
         toolbar.setFloatable(false);
 
-        addButtonToToolbar(ID_ACTION_OPEN, "Abrir", ICON_OPEN, 
-                createToolbarActionListener(e -> 
-                        RTFActions.loadFromRTF(textPane, RTFActions.getFile(textPane, JFileChooser.OPEN_DIALOG))));
+        addButtonToToolbar(ID_ACTION_OPEN, "Abrir", ICON_OPEN,
+                createToolbarActionListener(e
+                        -> HTMLActions.loadFromHTML(textPane, HTMLActions.getFile(textPane, JFileChooser.OPEN_DIALOG))));
         addButtonToToolbar(ID_ACTION_SAVE, "Guardar", ICON_SAVE,
-                createToolbarActionListener(e -> 
-                        RTFActions.saveAsRTF(textPane, RTFActions.getFile(textPane, JFileChooser.SAVE_DIALOG))));
+                createToolbarActionListener(e
+                        -> HTMLActions.saveAsHTML(textPane, HTMLActions.getFile(textPane, JFileChooser.SAVE_DIALOG))));
 
         toolbar.addSeparator();
 
@@ -134,74 +138,116 @@ public class RichTextField extends JPanel {
         toolbar.addSeparator();
 
         addButtonToToolbar(ID_ACTION_CUT, "Cortar", ICON_CUT,
-                new RTFEditorKit.CutAction());
+                new HTMLEditorKit.CutAction());
         addButtonToToolbar(ID_ACTION_COPY, "Copiar", ICON_COPY,
-                new RTFEditorKit.CopyAction());
+                new HTMLEditorKit.CopyAction());
         addButtonToToolbar(ID_ACTION_PASTE, "Pegar", ICON_PASTE,
-                new RTFEditorKit.PasteAction());
+                new HTMLEditorKit.PasteAction());
 
         toolbar.addSeparator();
 
-        JSpinner sizeSpinner = new JSpinner(new SpinnerNumberModel(10, 8, 100, 1));
-        sizeSpinner.setName(ID_ACTION_FONT_SIZE);
-        sizeSpinner.getModel().addChangeListener((e) -> {
+        toolbar.add(new JLabel(" Fuente: "));
+
+        JComboBox fontCombo = new JComboBox(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
+        fontCombo.setName(ID_ACTION_FONT_FAMILY);
+        fontCombo.addItemListener((e) -> {
             SwingUtilities.invokeLater(() -> {
-                new RTFEditorKit.FontSizeAction(ID_ACTION_FONT_SIZE, Integer.parseInt(sizeSpinner.getValue().toString()))
-                        .actionPerformed(new ActionEvent(e.getSource(), 0, ID_ACTION_FONT_SIZE));
+                new HTMLEditorKit.FontFamilyAction(ID_ACTION_FONT_FAMILY, (String) fontCombo.getSelectedItem())
+                        .actionPerformed(new ActionEvent(e.getSource(), 0, ID_ACTION_FONT_FAMILY));
                 updateStyleButtons();
             });
         });
-        toolbar.add(sizeSpinner);
+        toolbar.add(fontCombo);
+
+        JComboBox sizeComboBox = new JComboBox(new String[]{"8", "10", "12", "14", "16", "18", "20", "24", "32", "40", "60", "80"});
+        sizeComboBox.setName(ID_ACTION_FONT_SIZE);
+        sizeComboBox.setEditable(true);
+        sizeComboBox.addItemListener((e) -> {
+            SwingUtilities.invokeLater(() -> {
+                new HTMLEditorKit.FontSizeAction(ID_ACTION_FONT_SIZE, Integer.parseInt(sizeComboBox.getSelectedItem().toString()))
+                        .actionPerformed(new ActionEvent(textPane, 0, ID_ACTION_FONT_SIZE));
+            });
+        });
+        toolbar.add(sizeComboBox);
+
+        addButtonToToolbar(ID_ACTION_FONT_COLOR, "Color de la Fuente", generateColorIcon(Color.BLACK), (e) -> {
+            SwingUtilities.invokeLater(() -> {
+                AttributeSet attrs = textPane.getCharacterAttributes();
+                Color newColor = JColorChooser.showDialog((Component) e.getSource(), "Color", StyleConstants.getForeground(attrs));
+                if (newColor != null) {
+                    new HTMLEditorKit.ForegroundAction(ID_ACTION_FONT_COLOR, newColor)
+                            .actionPerformed(new ActionEvent(textPane, 0, ID_ACTION_FONT_COLOR));
+                    updateStyleButtons();
+                }
+            });
+        });
+
+        toolbar.addSeparator();
+
+        toolbar.add(new JLabel(" Fondo: "));
+
+        addButtonToToolbar(ID_ACTION_FONT_BACKGROUND, "Color de fondo", generateColorIcon(Color.BLACK), (e) -> {
+            SwingUtilities.invokeLater(() -> {
+                AttributeSet attrs = textPane.getCharacterAttributes();
+                Color newColor = JColorChooser.showDialog((Component) e.getSource(), "Color", StyleConstants.getBackground(attrs));
+                if (newColor != null) {
+                    HTMLActions.setTextBackground(textPane, newColor);
+                    updateStyleButtons();
+                }
+            });
+        });
 
         toolbar.addSeparator();
 
         addToggleButtonToToolbar(ID_ACTION_BOLD, "Negrita", ICON_BOLD,
-                new RTFEditorKit.BoldAction());
+                new HTMLEditorKit.BoldAction());
         addToggleButtonToToolbar(ID_ACTION_UNDERLINE, "Subrayado", ICON_UNDERLINE,
-                new RTFEditorKit.UnderlineAction());
+                new HTMLEditorKit.UnderlineAction());
         addToggleButtonToToolbar(ID_ACTION_ITALIC, "Cursiva", ICON_ITALIC,
-                new RTFEditorKit.ItalicAction());
+                new HTMLEditorKit.ItalicAction());
 
         toolbar.addSeparator();
 
         addButtonToToolbar(ID_ACTION_REMOVE_INDENT, "Quitar indentado", ICON_REMOVE_INDENT,
-                (e) -> RTFActions.removeIndent(textPane));
+                (e) -> HTMLActions.removeIndent(textPane));
         addButtonToToolbar(ID_ACTION_ADD_INDENT, "Insertar indentado", ICON_ADD_INDENT,
-                (e) -> RTFActions.addIndent(textPane));
+                (e) -> HTMLActions.addIndent(textPane));
+
+        toolbar.addSeparator();
+
+        addButtonToToolbar(ID_ACTION_LIST, "Lista", ICON_LIST,
+                e -> HTMLActions.setAsList(textPane, false));
+        addButtonToToolbar(ID_ACTION_NUMERED_LIST, "Lista Numerada", ICON_NUMERED_LIST,
+                e -> HTMLActions.setAsList(textPane, true));
 
         toolbar.addSeparator();
 
         addToggleButtonToToolbar(ID_ACTION_ALIGN_LEFT, "Alineación Izquierda", ICON_ALIGN_LEFT,
-                new RTFEditorKit.AlignmentAction(ID_ACTION_ALIGN_LEFT, StyleConstants.ALIGN_LEFT));
+                new HTMLEditorKit.AlignmentAction(ID_ACTION_ALIGN_LEFT, StyleConstants.ALIGN_LEFT));
         addToggleButtonToToolbar(ID_ACTION_ALIGN_CENTER, "Alineación Centrada", ICON_ALIGN_CENTER,
-                new RTFEditorKit.AlignmentAction(ID_ACTION_ALIGN_CENTER, StyleConstants.ALIGN_CENTER));
+                new HTMLEditorKit.AlignmentAction(ID_ACTION_ALIGN_CENTER, StyleConstants.ALIGN_CENTER));
         addToggleButtonToToolbar(ID_ACTION_ALIGN_RIGHT, "Alineación Derecha", ICON_ALIGN_RIGHT,
-                new RTFEditorKit.AlignmentAction(ID_ACTION_ALIGN_RIGHT, StyleConstants.ALIGN_RIGHT));
+                new HTMLEditorKit.AlignmentAction(ID_ACTION_ALIGN_RIGHT, StyleConstants.ALIGN_RIGHT));
         addToggleButtonToToolbar(ID_ACTION_ALIGN_JUSTIFIED, "Alineación Justificada", ICON_ALIGN_JUSTIFIED,
-                new RTFEditorKit.AlignmentAction(ID_ACTION_ALIGN_JUSTIFIED, StyleConstants.ALIGN_JUSTIFIED));
+                new HTMLEditorKit.AlignmentAction(ID_ACTION_ALIGN_JUSTIFIED, StyleConstants.ALIGN_JUSTIFIED));
 
         toolbar.addSeparator();
 
         addButtonToToolbar(ID_ACTION_ADD_PICTURE, "Insertar imagen", ICON_ADD_PICTURE,
-                (e) -> RTFActions.addImage(textPane));
+                (e) -> HTMLActions.addImage(textPane));
+    }
+
+    private ImageIcon generateColorIcon(Color color) {
+        return ImageLoader.generateRectangleColorIcon(16, 16, color);
     }
 
     private void configureTextPane() {
-        RTFEditorKit editorKit = new RTFEditorKit() {
-            private RTFScaledViewFactory viewFactory = null;
-
-            @Override
-            public ViewFactory getViewFactory() {
-                if (viewFactory == null) {
-                    viewFactory = new RTFScaledViewFactory(super.getViewFactory());
-                }
-                return viewFactory;
-            }
-        };
-        textPane.setEditorKit(editorKit);
-        textPane.setDocument(editorKit.createDefaultDocument());
-        textPane.setTransferHandler(new RTFTransferHandler());
+        textPane.setContentType("text/html");
+        textPane.setEditorKit(new ScaledHTMLEditorKit());
         textPane.addCaretListener(e -> updateStyleButtons());
+        HTMLListText.ListParaKeyListener textWithListListener = new HTMLListText.ListParaKeyListener(textPane);
+        textPane.addKeyListener(textWithListListener);
+        textPane.addCaretListener(textWithListListener);
         textPane.getStyledDocument().addUndoableEditListener(e -> undoManager.addEdit(e.getEdit()));
         textPane.addComponentListener(new ComponentAdapter() {
             @Override
@@ -236,29 +282,32 @@ public class RichTextField extends JPanel {
         AttributeSet attrs = textPane.getCharacterAttributes();
 
         for (Component c : toolbar.getComponents()) {
-            switch (c) {
-                case JSpinner s when isAction(s, ID_ACTION_FONT_SIZE) ->
-                    s.setValue(StyleConstants.getFontSize(attrs));
-                case JButton b when isAction(b, ID_ACTION_UNDO) ->
-                    b.setEnabled(undoManager.canUndo());
-                case JButton b when isAction(b, ID_ACTION_REDO) ->
-                    b.setEnabled(undoManager.canRedo());
-                case JToggleButton tb when isAction(tb, ID_ACTION_BOLD) ->
-                    tb.setSelected(StyleConstants.isBold(attrs));
-                case JToggleButton tb when isAction(tb, ID_ACTION_UNDERLINE) ->
-                    tb.setSelected(StyleConstants.isUnderline(attrs));
-                case JToggleButton tb when isAction(tb, ID_ACTION_ITALIC) ->
-                    tb.setSelected(StyleConstants.isItalic(attrs));
-                case JToggleButton tb when isAction(tb, ID_ACTION_ALIGN_LEFT) ->
-                    tb.setSelected(StyleConstants.getAlignment(attrs) == StyleConstants.ALIGN_LEFT);
-                case JToggleButton tb when isAction(tb, ID_ACTION_ALIGN_CENTER) ->
-                    tb.setSelected(StyleConstants.getAlignment(attrs) == StyleConstants.ALIGN_CENTER);
-                case JToggleButton tb when isAction(tb, ID_ACTION_ALIGN_RIGHT) ->
-                    tb.setSelected(StyleConstants.getAlignment(attrs) == StyleConstants.ALIGN_RIGHT);
-                case JToggleButton tb when isAction(tb, ID_ACTION_ALIGN_JUSTIFIED) ->
-                    tb.setSelected(StyleConstants.getAlignment(attrs) == StyleConstants.ALIGN_JUSTIFIED);
-                case null, default -> {
-                }
+            if (isAction(c, ID_ACTION_FONT_FAMILY)) {
+                ((JComboBox) c).setSelectedItem(String.valueOf(StyleConstants.getFontFamily(attrs)));
+            } else if (isAction(c, ID_ACTION_FONT_SIZE)) {
+                ((JComboBox) c).setSelectedItem(String.valueOf(StyleConstants.getFontSize(attrs)));
+            } else if (isAction(c, ID_ACTION_FONT_COLOR)) {
+                ((JButton) c).setIcon(generateColorIcon(StyleConstants.getForeground(attrs)));
+            } else if (isAction(c, ID_ACTION_FONT_BACKGROUND)) {
+                ((JButton) c).setIcon(generateColorIcon(StyleConstants.getBackground(attrs)));
+            } else if (isAction(c, ID_ACTION_UNDO)) {
+                ((JButton) c).setEnabled(undoManager.canUndo());
+            } else if (isAction(c, ID_ACTION_REDO)) {
+                ((JButton) c).setEnabled(undoManager.canRedo());
+            } else if (isAction(c, ID_ACTION_BOLD)) {
+                ((JToggleButton) c).setSelected(StyleConstants.isBold(attrs));
+            } else if (isAction(c, ID_ACTION_UNDERLINE)) {
+                ((JToggleButton) c).setSelected(StyleConstants.isUnderline(attrs));
+            } else if (isAction(c, ID_ACTION_ITALIC)) {
+                ((JToggleButton) c).setSelected(StyleConstants.isItalic(attrs));
+            } else if (isAction(c, ID_ACTION_ALIGN_LEFT)) {
+                ((JToggleButton) c).setSelected(StyleConstants.getAlignment(attrs) == StyleConstants.ALIGN_LEFT);
+            } else if (isAction(c, ID_ACTION_ALIGN_CENTER)) {
+                ((JToggleButton) c).setSelected(StyleConstants.getAlignment(attrs) == StyleConstants.ALIGN_CENTER);
+            } else if (isAction(c, ID_ACTION_ALIGN_RIGHT)) {
+                ((JToggleButton) c).setSelected(StyleConstants.getAlignment(attrs) == StyleConstants.ALIGN_RIGHT);
+            } else if (isAction(c, ID_ACTION_ALIGN_JUSTIFIED)) {
+                ((JToggleButton) c).setSelected(StyleConstants.getAlignment(attrs) == StyleConstants.ALIGN_JUSTIFIED);
             }
         }
     }

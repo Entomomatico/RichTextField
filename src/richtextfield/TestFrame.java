@@ -14,7 +14,7 @@ public class TestFrame extends JFrame {
         super();
         this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         this.setContentPane(new RichTextField());
-        this.setPreferredSize(new Dimension(400, 400));
+        this.setPreferredSize(new Dimension(600, 400));
         
         this.pack();
     }
