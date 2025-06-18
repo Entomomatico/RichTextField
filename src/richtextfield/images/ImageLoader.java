@@ -26,6 +26,8 @@ public class ImageLoader {
     public static final String PATH_ICON_ALIGN_RIGHT = "/richtextfield/images/icons8-align-right-16.png";
     public static final String PATH_ICON_ALIGN_JUSTIFIED = "/richtextfield/images/icons8-align-justify-16.png";
     public static final String PATH_ICON_ADD_PICTURE = "/richtextfield/images/icons8-picture-16.png";
+    public static final String PATH_ICON_SCREENSHOT = "/richtextfield/images/icons8-add-camera.png";
+    
     
     public static ImageIcon get(String imagePath){
         return new ImageIcon(ImageLoader.class.getResource(imagePath));

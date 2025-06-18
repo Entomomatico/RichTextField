@@ -16,7 +16,6 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JColorChooser;
 import javax.swing.JComboBox;
-import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -53,6 +52,7 @@ public class RichTextField extends JPanel {
     public static final ImageIcon ICON_ALIGN_RIGHT = ImageLoader.get(ImageLoader.PATH_ICON_ALIGN_RIGHT);
     public static final ImageIcon ICON_ALIGN_JUSTIFIED = ImageLoader.get(ImageLoader.PATH_ICON_ALIGN_JUSTIFIED);
     public static final ImageIcon ICON_ADD_PICTURE = ImageLoader.get(ImageLoader.PATH_ICON_ADD_PICTURE);
+    public static final ImageIcon ICON_SCREENSHOT = ImageLoader.get(ImageLoader.PATH_ICON_SCREENSHOT);
 
     public static final String ID_ACTION_OPEN = "openAction";
     public static final String ID_ACTION_SAVE = "saveAction";
@@ -77,6 +77,7 @@ public class RichTextField extends JPanel {
     public static final String ID_ACTION_ALIGN_RIGHT = "alignRightAction";
     public static final String ID_ACTION_ALIGN_JUSTIFIED = "alignJustifiedAction";
     public static final String ID_ACTION_ADD_PICTURE = "addPictureAction";
+    public static final String ID_ACTION_SCREENSHOT = "screenshot";
 
     private final JToolBar toolbar;
     private final JScrollPane scrollpane;
@@ -116,11 +117,9 @@ public class RichTextField extends JPanel {
         toolbar.setFloatable(false);
 
         addButtonToToolbar(ID_ACTION_OPEN, "Abrir", ICON_OPEN,
-                createToolbarActionListener(e
-                        -> HTMLActions.loadFromHTML(textPane, HTMLActions.getFile(textPane, JFileChooser.OPEN_DIALOG))));
+                createToolbarActionListener(e -> HTMLActions.loadFromHTML(textPane)));
         addButtonToToolbar(ID_ACTION_SAVE, "Guardar", ICON_SAVE,
-                createToolbarActionListener(e
-                        -> HTMLActions.saveAsHTML(textPane, HTMLActions.getFile(textPane, JFileChooser.SAVE_DIALOG))));
+                createToolbarActionListener(e -> HTMLActions.saveAsHTML(textPane)));
 
         toolbar.addSeparator();
 
@@ -235,6 +234,8 @@ public class RichTextField extends JPanel {
 
         addButtonToToolbar(ID_ACTION_ADD_PICTURE, "Insertar imagen", ICON_ADD_PICTURE,
                 (e) -> HTMLActions.addImage(textPane));
+        addButtonToToolbar(ID_ACTION_SCREENSHOT, "Capturar pantalla", ICON_SCREENSHOT,
+                (e) -> HTMLActions.captureScreenShot(textPane));
     }
 
     private ImageIcon generateColorIcon(Color color) {
@@ -258,6 +259,8 @@ public class RichTextField extends JPanel {
             }
         });
 
+        textPane.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK), ID_ACTION_SAVE);
+        textPane.getActionMap().put(ID_ACTION_SAVE, createToolbarActionListener(e -> HTMLActions.saveAsHTML(textPane)));
         textPane.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_B, InputEvent.CTRL_DOWN_MASK), ID_ACTION_BOLD);
         textPane.getActionMap().put(ID_ACTION_BOLD, createToolbarActionListener(new StyledEditorKit.BoldAction()));
         textPane.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_U, InputEvent.CTRL_DOWN_MASK), ID_ACTION_UNDERLINE);

@@ -15,11 +15,6 @@ import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyledDocument;
 import richtextfield.utils.CustomLogger;
 
-/**
- * Based on https://www.javaquizplayer.com/
- * 
- * @author Entomomatico
- */
 public class HTMLListText {
 
     private static final char BULLET_CHAR = '\u2022';
