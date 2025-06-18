@@ -83,6 +83,8 @@ public class RichTextField extends JPanel {
     private final JScrollPane scrollpane;
     private final JTextPane textPane;
     private final UndoManager undoManager;
+    
+    private HTMLListBehaviorHandler listBehaviorHandler;
 
     public RichTextField() {
         super();
@@ -215,9 +217,9 @@ public class RichTextField extends JPanel {
         toolbar.addSeparator();
 
         addButtonToToolbar(ID_ACTION_LIST, "Lista", ICON_LIST,
-                e -> HTMLActions.setAsList(textPane, false));
+                e -> listBehaviorHandler.insertListFromTextPane(false));
         addButtonToToolbar(ID_ACTION_NUMERED_LIST, "Lista Numerada", ICON_NUMERED_LIST,
-                e -> HTMLActions.setAsList(textPane, true));
+                e -> listBehaviorHandler.insertListFromTextPane(true));
 
         toolbar.addSeparator();
 
@@ -246,9 +248,10 @@ public class RichTextField extends JPanel {
         textPane.setContentType("text/html");
         textPane.setEditorKit(new ScaledHTMLEditorKit());
         textPane.addCaretListener(e -> updateStyleButtons());
-        HTMLListText.ListParaKeyListener textWithListListener = new HTMLListText.ListParaKeyListener(textPane);
-        textPane.addKeyListener(textWithListListener);
-        textPane.addCaretListener(textWithListListener);
+//        HTMLListText.ListParaKeyListener textWithListListener = new HTMLListText.ListParaKeyListener(textPane);
+//        textPane.addKeyListener(textWithListListener);
+//        textPane.addCaretListener(textWithListListener);
+        listBehaviorHandler = new HTMLListBehaviorHandler(textPane);
         textPane.getStyledDocument().addUndoableEditListener(e -> undoManager.addEdit(e.getEdit()));
         textPane.addComponentListener(new ComponentAdapter() {
             @Override
